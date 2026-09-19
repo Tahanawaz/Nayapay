@@ -2053,19 +2053,19 @@ select {
 }
 
 .history-screen .activity-summary {
-  margin: 0 36px 28px;
+  margin: 0 51px 28px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 28px;
 }
 
 .history-screen .activity-summary div {
   min-height: 74px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, .07);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .035);
-  box-shadow: 0 7px 18px rgba(0, 0, 0, .08);
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .history-screen .activity-summary__outgoing {
@@ -2082,9 +2082,9 @@ select {
 }
 
 .history-screen .activity-summary i {
-  width: 25px;
-  height: 25px;
-  border-radius: 5px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   display: grid;
   place-items: center;
   background: #30222d;
@@ -2100,9 +2100,9 @@ select {
 }
 
 .history-screen .activity-summary b {
-  margin-top: 3px;
+  margin-top: 7px;
   color: #f8eff4;
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .history-screen .history-list {
@@ -2267,17 +2267,27 @@ select {
 }
 
 :root[data-theme='light'] .history-screen .activity-summary div {
-  border-color: #eee8ec;
-  background: #fcfafb;
-  box-shadow: 0 6px 16px rgba(45, 27, 39, .035);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 :root[data-theme='light'] .history-screen .activity-summary__incoming {
-  border-left: 3px solid #8f9bff;
+  border: 0;
 }
 
 :root[data-theme='light'] .history-screen .activity-summary__outgoing {
-  border-right: 3px solid #ff9b83;
+  border: 0;
+}
+
+:root[data-theme='light'] .history-screen .activity-summary__incoming i {
+  background: #eeeeef;
+  color: #392c38;
+}
+
+:root[data-theme='light'] .history-screen .activity-summary__outgoing i {
+  background: #fff0f0;
+  color: #e84046;
 }
 
 :root[data-theme='light'] .history-screen .history-list h2 {
@@ -2425,6 +2435,47 @@ select {
 
 .theme-swatch--light { background: #f7f7f8; }
 .theme-swatch--dark { background: #1d1820; border-color: #1d1820; }
+
+.settings-send-card {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-send-card > button {
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 38px 1fr 24px;
+  align-items: center;
+  gap: 10px;
+  background: #17161b;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.settings-send-card > button > span {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: #ff4d13;
+}
+
+.settings-send-card > button .icon {
+  width: 19px;
+  height: 19px;
+}
+
+.settings-send-card > button > .icon:last-child {
+  transform: rotate(-45deg);
+  opacity: .72;
+}
 
 :root[data-theme='dark'],
 :root[data-theme='dark'] body {

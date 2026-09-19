@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import { Directory, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import html2canvas from 'html2canvas'
@@ -791,7 +792,7 @@ function BottomNav({ active, onNav }) {
   )
 }
 
-function MoneyForm({ type, profile, favorites, initialDraft, onBack, onSubmit, onScan }) {
+function MoneyForm({ type, profile, favorites, initialDraft, onBack, onSubmit, onScan, showRecipientName = false }) {
   const isReceive = type === 'receive'
   const [draft, setDraft] = useState({
     name: initialDraft?.name || (isReceive ? 'Taha Nawaz' : ''),
@@ -815,6 +816,21 @@ function MoneyForm({ type, profile, favorites, initialDraft, onBack, onSubmit, o
     })
   }
 
+  const continuePayment = () => {
+    if (!isReceive && (!draft.bank || !draft.account.trim())) {
+      window.alert('Please select a bank and enter an account number.')
+      return
+    }
+    if (!isReceive && showRecipientName && !draft.name.trim()) {
+      window.alert('Please enter the recipient name.')
+      return
+    }
+    onSubmit({
+      ...draft,
+      name: draft.name.trim() || matchedFavorite?.name || 'Account Holder',
+    })
+  }
+
   return (
     <main className="screen form-screen">
       <StatusBar />
@@ -829,10 +845,12 @@ function MoneyForm({ type, profile, favorites, initialDraft, onBack, onSubmit, o
           <button className="scan-inline" type="button" onClick={onScan}><Icon name="scan" /></button>
         </div>
 
-        <label>
-          <span>{isReceive ? 'Source Acc. Title' : 'Recipient Name'}</span>
-          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-        </label>
+        {(isReceive || showRecipientName) && (
+          <label>
+            <span>{isReceive ? 'Source Acc. Title' : 'Recipient Name'}</span>
+            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+          </label>
+        )}
 
         <label>
           <span>{isReceive ? 'Source Bank' : 'Destination Bank'}</span>
@@ -864,13 +882,13 @@ function MoneyForm({ type, profile, favorites, initialDraft, onBack, onSubmit, o
           </label>
         )}
 
-        <div className="linked-account">
+        {(isReceive || showRecipientName) && <div className="linked-account">
           <span>Linked wallet</span>
           <b>{profile.name}</b>
           <small>{profile.phone} • {shortAccount(profile.account)}</small>
-        </div>
+        </div>}
 
-        <button className="primary-btn" type="button" onClick={() => onSubmit(draft)}>
+        <button className="primary-btn" type="button" onClick={continuePayment}>
           {isReceive ? `${button} Rs. ${money(draft.amount)}` : button}
           <Icon name={isReceive ? 'plus' : 'send'} />
         </button>
@@ -946,9 +964,9 @@ function Receipt({ item, profile, onBack, onShare, autoShare = false, onAutoShar
   const isReceived = item.direction === 'received'
   const [copied, setCopied] = useState(false)
   const receiptRef = useRef(null)
-  const topName = isReceived ? profile.name : item.name
+  const topName = item.name
   const topBank = item.bank || 'Easypaisa'
-  const topAccount = isReceived ? profile.account : item.account
+  const topAccount = item.account
   const sub = `${topBank}-${topAccount.slice(-4)}`
   const destinationName = isReceived ? profile.name : item.name
   const sourceName = isReceived ? item.name : profile.name
@@ -1036,9 +1054,9 @@ function historyDateLabel(value) {
 
 function PaymentReview({ direction, draft, profile, onBack, onConfirm }) {
   const isReceived = direction === 'received'
-  const topName = isReceived ? profile.name : draft.name
+  const topName = draft.name
   const topBank = normalizeBankName(draft.bank) || 'Easypaisa'
-  const topAccount = isReceived ? profile.account : draft.account
+  const topAccount = draft.account
   const destinationName = isReceived ? profile.name : draft.name
   const sourceName = isReceived ? draft.name : profile.name
   const destinationAccount = isReceived ? profile.account : draft.account
@@ -1439,11 +1457,11 @@ function History({ transactions, profile, balance, showBalance, setShowBalance, 
       <div className="history-month">{monthLabel}</div>
       <section className="activity-summary">
         <div className="activity-summary__incoming">
-          <span><i>↙</i>Incoming</span>
+          <span><i aria-hidden="true">↘</i>Incoming</span>
           <b>Rs. {money(lastReceived?.amount)}</b>
         </div>
         <div className="activity-summary__outgoing">
-          <span>Outgoing<i>↗</i></span>
+          <span>Outgoing<i aria-hidden="true">↗</i></span>
           <b>Rs. {money(lastSent?.amount)}</b>
         </div>
       </section>
@@ -1862,7 +1880,7 @@ function Profile({ profile, balance, onBack, onHistory, onNav, onSave }) {
   )
 }
 
-function Settings({ theme, onThemeChange, onBack, onNav }) {
+function Settings({ theme, onThemeChange, onBack, onNav, onSend }) {
   return (
     <main className="screen settings-screen">
       <StatusBar />
@@ -1880,6 +1898,17 @@ function Settings({ theme, onThemeChange, onBack, onNav }) {
             <span className="theme-swatch theme-swatch--dark" />Dark
           </button>
         </div>
+      </section>
+      <section className="settings-card settings-send-card">
+        <div>
+          <b>Send Money</b>
+          <span>Transfer using a bank and account number.</span>
+        </div>
+        <button type="button" onClick={onSend}>
+          <span><Icon name="send" /></span>
+          Send Money
+          <Icon name="send" />
+        </button>
       </section>
       <BottomNav active="home" onNav={onNav} />
     </main>
@@ -1909,10 +1938,14 @@ function App() {
   const [screen, setScreen] = useState('home')
   const [selected, setSelected] = useState(null)
   const [pendingDraft, setPendingDraft] = useState(null)
+  const [sendReturnScreen, setSendReturnScreen] = useState('home')
+  const [amountReturnScreen, setAmountReturnScreen] = useState('send')
   const [pendingDirection, setPendingDirection] = useState('sent')
   const [receiptIntro, setReceiptIntro] = useState(false)
   const [shareOnReceiptOpen, setShareOnReceiptOpen] = useState(false)
   const paymentTimerRef = useRef(null)
+  const screenRef = useRef('home')
+  const paymentCompletedRef = useRef(false)
   const [favorites, setFavorites] = useState(savedState.favorites)
   const [transactions, setTransactions] = useState(savedState.transactions)
   const [notifications, setNotifications] = useState(savedState.notifications)
@@ -1921,6 +1954,7 @@ function App() {
   const currentReceipt = useMemo(() => selected || transactions[0], [selected, transactions])
 
   const navigate = useCallback((nextScreen) => {
+    screenRef.current = nextScreen
     setScreen(nextScreen)
     if (window.history.state?.screen !== nextScreen) {
       window.history.pushState({ screen: nextScreen }, '', `#${nextScreen}`)
@@ -1928,6 +1962,7 @@ function App() {
   }, [])
 
   const replaceScreen = useCallback((nextScreen) => {
+    screenRef.current = nextScreen
     setScreen(nextScreen)
     window.history.replaceState({ screen: nextScreen }, '', `#${nextScreen}`)
   }, [])
@@ -1939,8 +1974,9 @@ function App() {
     }
     setPendingDraft(null)
     setReceiptIntro(false)
-    navigate('home')
-  }, [navigate])
+    paymentCompletedRef.current = false
+    replaceScreen('home')
+  }, [replaceScreen])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLaunching(false), 1800)
@@ -1967,12 +2003,53 @@ function App() {
     }
 
     const handlePopState = (event) => {
-      setScreen(event.state?.screen || 'home')
+      if (paymentCompletedRef.current && ['processing', 'done', 'receipt'].includes(screenRef.current)) {
+        if (paymentTimerRef.current) {
+          window.clearTimeout(paymentTimerRef.current)
+          paymentTimerRef.current = null
+        }
+        paymentCompletedRef.current = false
+        setPendingDraft(null)
+        setReceiptIntro(false)
+        replaceScreen('home')
+        return
+      }
+      const previousScreen = event.state?.screen || 'home'
+      screenRef.current = previousScreen
+      setScreen(previousScreen)
     }
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
+  }, [replaceScreen])
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined
+
+    let listener
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      const currentScreen = screenRef.current
+      if (currentScreen === 'home') {
+        CapacitorApp.minimizeApp()
+        return
+      }
+      if (paymentCompletedRef.current || currentScreen === 'processing' || currentScreen === 'done') {
+        goHome()
+        return
+      }
+      if (canGoBack) {
+        window.history.back()
+        return
+      }
+      goHome()
+    }).then((handle) => {
+      listener = handle
+    })
+
+    return () => {
+      listener?.remove()
+    }
+  }, [goHome])
 
   const saveFavorite = (favorite) => {
     setFavorites((list) => {
@@ -1991,7 +2068,7 @@ function App() {
 
   const openNav = (target) => {
     if (target === 'home') {
-      navigate('home')
+      goHome()
       return
     }
     if (target === 'transfer') {
@@ -2009,10 +2086,19 @@ function App() {
     navigate(target)
   }
 
+  const startSend = (returnScreen = 'home') => {
+    paymentCompletedRef.current = false
+    setPendingDraft(null)
+    setSendReturnScreen(returnScreen)
+    navigate('send')
+  }
+
   const validatePaymentDraft = (direction, draft) => {
     const amount = Number(draft.amount || 0)
-    if (!draft.name?.trim() || !draft.bank || !draft.account?.trim()) {
-      window.alert('Please fill account name, bank and account number.')
+    if (!draft.bank || !draft.account?.trim() || (direction === 'received' && !draft.name?.trim())) {
+      window.alert(direction === 'sent'
+        ? 'Please select a bank and enter an account number.'
+        : 'Please fill account name, bank and account number.')
       return false
     }
     if (!Number.isInteger(amount) || amount <= 0) {
@@ -2076,6 +2162,7 @@ function App() {
     setSelected(item)
     setPendingDraft(null)
     setReceiptIntro(false)
+    paymentCompletedRef.current = true
     navigate('processing')
     if (paymentTimerRef.current) {
       window.clearTimeout(paymentTimerRef.current)
@@ -2095,7 +2182,7 @@ function App() {
   }
 
   if (screen === 'send') {
-    return <MoneyForm type="send" profile={profile} favorites={favorites} initialDraft={pendingDraft} onBack={goHome} onSubmit={(draft) => { setPendingDraft({ ...draft, amount: '' }); navigate('scanned-amount') }} onScan={() => navigate('qr')} />
+    return <MoneyForm type="send" profile={profile} favorites={favorites} initialDraft={pendingDraft} onBack={() => navigate(sendReturnScreen)} onSubmit={(draft) => { setPendingDraft({ ...draft, amount: '' }); setAmountReturnScreen('send'); navigate('scanned-amount') }} onScan={() => navigate('qr')} showRecipientName={sendReturnScreen === 'home'} />
   }
 
   if (screen === 'history') {
@@ -2176,7 +2263,7 @@ function App() {
   }
 
   if (screen === 'qr') {
-    return <QrScanner favorites={favorites} onBack={goHome} onUse={(draft) => { setPendingDraft(draft); navigate('scanned-amount') }} />
+    return <QrScanner favorites={favorites} onBack={goHome} onUse={(draft) => { setPendingDraft(draft); setAmountReturnScreen('qr'); navigate('scanned-amount') }} />
   }
 
   if (screen === 'scanned-amount' && pendingDraft) {
@@ -2184,7 +2271,7 @@ function App() {
       <ScannedAccountAmount
         draft={pendingDraft}
         balance={balance}
-        onBack={() => navigate('qr')}
+        onBack={() => navigate(amountReturnScreen)}
         onNext={(draft) => openPaymentReview('sent', draft)}
       />
     )
@@ -2199,7 +2286,7 @@ function App() {
   }
 
   if (screen === 'more') {
-    return <Settings theme={theme} onThemeChange={setTheme} onBack={goHome} onNav={openNav} />
+    return <Settings theme={theme} onThemeChange={setTheme} onBack={() => navigate('profile')} onNav={openNav} onSend={() => startSend('more')} />
   }
 
   if (screen !== 'home') {
@@ -2224,7 +2311,7 @@ function App() {
       showBalance={showBalance}
       setShowBalance={setShowBalance}
       onAdd={() => navigate('add')}
-      onSend={() => navigate('send')}
+      onSend={() => startSend('home')}
       onProfile={() => navigate('profile')}
       onReceipt={(item) => { setReceiptIntro(false); setSelected(item); navigate('receipt') }}
       onNav={openNav}

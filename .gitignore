@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+.tools/
+.android-sdk/
 
 # Editor directories and files
 .vscode/*
