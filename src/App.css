@@ -233,6 +233,25 @@ button {
   letter-spacing: 0;
 }
 
+.balance-value--refreshing {
+  opacity: .48;
+}
+
+.balance-value--refreshed {
+  animation: balance-value-in .38s ease both;
+}
+
+@keyframes balance-value-in {
+  from {
+    opacity: .35;
+    transform: translateY(4px) scale(.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .balance-line button,
 .refresh-line {
   border: 0;
@@ -246,6 +265,19 @@ button {
   align-items: center;
   gap: 7px;
   font-size: 13px;
+}
+
+.refresh-line:disabled {
+  cursor: wait;
+  opacity: .78;
+}
+
+.refresh-line--active .icon {
+  animation: balance-refresh-spin .65s linear infinite;
+}
+
+@keyframes balance-refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 .quick-actions {
@@ -1386,8 +1418,8 @@ select {
   height: 100dvh;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 50% -8%, rgba(175, 80, 235, .56) 0%, rgba(112, 45, 145, .34) 28%, transparent 59%),
-    linear-gradient(180deg, #78359b 0%, #4a244c 41%, #211317 78%, #160d10 100%);
+    radial-gradient(ellipse at 50% 0%, rgba(199, 177, 241, .52) 0%, rgba(230, 218, 249, .5) 32%, transparent 64%),
+    linear-gradient(180deg, #eee5fb 0%, #f7f2f8 56%, #ffffff 100%);
   display: grid;
   grid-template-rows: 1fr auto auto auto;
 }
@@ -1404,7 +1436,7 @@ select {
 
 .payment-done-card h2 {
   margin: 0 0 56px;
-  color: #fff7f5;
+  color: #321725;
   font-family: Roboto, Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: 20px;
   line-height: 1;
@@ -1510,7 +1542,7 @@ select {
 }
 
 .payment-done-card strong {
-  color: #fff8f6;
+  color: #321725;
   font-family: Roboto, Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: 35px;
   line-height: 1;
@@ -1519,7 +1551,7 @@ select {
 
 .payment-done-card span {
   margin-top: 19px;
-  color: rgba(255, 248, 247, .78);
+  color: #4e4049;
   font-size: 12px;
   line-height: 1.2;
   font-weight: 540;
@@ -1527,7 +1559,7 @@ select {
 
 .payment-done-card b {
   margin-top: 7px;
-  color: #fff8f6;
+  color: #351c2b;
   font-family: Roboto, Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.2;
@@ -1537,7 +1569,7 @@ select {
 
 .payment-done-card small {
   margin-top: 6px;
-  color: rgba(255, 247, 247, .72);
+  color: #80777e;
   font-size: 14px;
   font-weight: 500;
 }
@@ -1546,7 +1578,7 @@ select {
   margin-top: 22px;
   border: 0;
   background: transparent;
-  color: #a786ff;
+  color: #704bd2;
   font-size: 15px;
   font-weight: 500;
 }
@@ -1557,7 +1589,7 @@ select {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: rgba(255, 247, 247, .7);
+  color: #aaa5aa;
   font-size: 14px;
 }
 
@@ -1576,18 +1608,18 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f4f7;
-  color: #291d28;
+  background: #301726;
+  color: #fff;
   font-size: 18px;
   font-weight: 600;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, .18);
+  box-shadow: 0 12px 26px rgba(48, 23, 38, .16);
 }
 
 .done-close-button {
   height: 42px;
   border: 0;
   background: transparent;
-  color: #fff8f6;
+  color: #291721;
   font-size: 17px;
   font-weight: 500;
 }
@@ -2477,6 +2509,353 @@ select {
   opacity: .72;
 }
 
+.card-screen {
+  min-height: 100dvh;
+  padding-bottom: 104px;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 56% 0, rgba(128, 90, 235, .2), transparent 28%),
+    #f8f8f9;
+}
+
+.card-topbar {
+  height: 82px;
+  padding: 12px 24px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-profile {
+  width: 48px;
+  height: 48px;
+  box-shadow: 0 5px 16px rgba(42, 30, 52, .12);
+}
+
+.card-top-actions {
+  display: flex;
+  gap: 13px;
+}
+
+.card-top-actions button {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #311727;
+  box-shadow: 0 7px 20px rgba(42, 30, 52, .08);
+}
+
+.card-top-actions .icon {
+  width: 23px;
+  height: 23px;
+  stroke-width: 2.6;
+}
+
+.virtual-card {
+  position: relative;
+  width: min(calc(100% - 112px), 278px);
+  aspect-ratio: .64;
+  margin: 22px auto 0;
+  border-radius: 25px;
+  padding: 28px 25px 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(165deg, #ca63f5 0%, #8b58e9 48%, #5142bd 100%);
+  color: #fff;
+  box-shadow: 0 11px 18px rgba(61, 45, 130, .2), inset 0 1px 0 rgba(255, 255, 255, .2);
+  transition: filter .25s ease, transform .25s ease;
+}
+
+.virtual-card::before,
+.virtual-card::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.virtual-card::before {
+  width: 260px;
+  height: 260px;
+  right: -145px;
+  top: 105px;
+  background: rgba(255, 255, 255, .045);
+}
+
+.virtual-card::after {
+  width: 210px;
+  height: 210px;
+  left: -135px;
+  bottom: -90px;
+  background: rgba(38, 23, 122, .1);
+}
+
+.virtual-card--frozen {
+  filter: saturate(.18);
+}
+
+.virtual-card__top,
+.virtual-card__bottom {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.virtual-card__top > span:last-child {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+
+.virtual-card__mark {
+  position: relative;
+  width: 58px;
+  height: 49px;
+  display: block;
+}
+
+.virtual-card__mark i {
+  position: absolute;
+  width: 19px;
+  height: 51px;
+  top: -1px;
+  border-radius: 2px;
+  background: #fff;
+  transform: skew(-35deg);
+}
+
+.virtual-card__mark i:first-child { left: 10px; }
+.virtual-card__mark i:last-child { left: 31px; }
+
+.virtual-card__mark::after {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 17px;
+  width: 33px;
+  height: 17px;
+  background: #fff;
+  transform: skew(-35deg);
+}
+
+.virtual-card__frozen-label {
+  position: absolute;
+  z-index: 2;
+  top: 88px;
+  left: 50%;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: .16em;
+}
+
+.virtual-card__name {
+  position: relative;
+  z-index: 1;
+  margin: auto 0;
+  font-size: 17px;
+  letter-spacing: .025em;
+}
+
+.virtual-card__bottom {
+  align-items: flex-end;
+}
+
+.virtual-card__bottom span {
+  max-width: 125px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1.35;
+}
+
+.virtual-card__bottom strong {
+  font-size: 38px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -.07em;
+  line-height: .9;
+}
+
+.card-actions {
+  width: min(calc(100% - 88px), 314px);
+  margin: 30px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.card-actions button {
+  border: 0;
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  background: transparent;
+  color: #3d2634;
+  font-size: 14px;
+}
+
+.card-actions button > span {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f0eff1;
+  color: #3b1a2f;
+  transition: background .2s ease, color .2s ease;
+}
+
+.card-actions button.active > span {
+  background: #e9ddff;
+  color: #7344d4;
+}
+
+.card-actions .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.card-action-symbol {
+  font-size: 25px;
+  line-height: 1;
+}
+
+.card-more-panel {
+  margin: 22px 22px 0;
+  border-radius: 20px;
+  padding: 8px 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(32, 22, 35, .05);
+}
+
+.card-more-panel div {
+  min-height: 48px;
+  border-bottom: 1px solid #efedf0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-more-panel div:last-child { border-bottom: 0; }
+.card-more-panel span { color: #858086; font-size: 13px; }
+.card-more-panel b { color: #271c24; font-size: 13px; }
+
+.spending-section {
+  margin: 54px 20px 0;
+}
+
+.spending-section > header {
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.spending-section h2 {
+  margin: 0;
+  color: #311d2a;
+  font-size: 22px;
+}
+
+.spending-section > header button {
+  border: 0;
+  padding: 7px;
+  background: transparent;
+  color: #7650d2;
+  font-size: 16px;
+}
+
+.spending-card {
+  margin-top: 18px;
+  border-radius: 22px;
+  padding: 22px 22px 20px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(32, 22, 35, .05);
+}
+
+.spending-card > span {
+  color: #777479;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.spending-values {
+  margin-top: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.spending-values b {
+  color: #181518;
+  font-size: 19px;
+}
+
+.spending-track {
+  height: 9px;
+  margin-top: 16px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e8e8ea;
+}
+
+.spending-track i {
+  display: block;
+  min-width: 4px;
+  height: 100%;
+  border-radius: inherit;
+  background: #18c986;
+}
+
+.spending-card > small {
+  display: block;
+  margin-top: 9px;
+  color: #8a858a;
+  font-size: 11px;
+}
+
+.spending-edit {
+  margin-top: 17px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.spending-edit input {
+  min-width: 0;
+  height: 40px;
+  border: 1px solid #e0dce2;
+  border-radius: 12px;
+  padding: 0 11px;
+}
+
+.spending-edit button {
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #efedf0;
+  color: #4c454b;
+  font-weight: 750;
+}
+
+.spending-edit button:last-child {
+  background: #7248d1;
+  color: #fff;
+}
+
 :root[data-theme='dark'],
 :root[data-theme='dark'] body {
   background: #151117;
@@ -2709,6 +3088,54 @@ select {
 :root[data-theme='dark'] .home-screen .latest-card span {
   color: #c7bdc5;
 }
+
+:root[data-theme='dark'] .card-screen {
+  background: radial-gradient(circle at 56% 0, rgba(128, 90, 235, .22), transparent 28%), #151117;
+}
+
+:root[data-theme='dark'] .card-top-actions button,
+:root[data-theme='dark'] .card-actions button > span,
+:root[data-theme='dark'] .card-more-panel,
+:root[data-theme='dark'] .spending-card {
+  background: #29222c;
+  color: #f5eef3;
+}
+
+:root[data-theme='dark'] .card-actions button,
+:root[data-theme='dark'] .spending-section h2,
+:root[data-theme='dark'] .spending-values b,
+:root[data-theme='dark'] .card-more-panel b {
+  color: #f5eef3;
+}
+
+:root[data-theme='dark'] .card-more-panel div {
+  border-color: #403642;
+}
+
+:root[data-theme='dark'] .spending-edit input {
+  border-color: #443a46;
+  background: #181419;
+  color: #fff;
+}
+
+/* Keep the payment-success artwork light in both app themes. */
+:root[data-theme='dark'] .payment-done-screen {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(199, 177, 241, .52) 0%, rgba(230, 218, 249, .5) 32%, transparent 64%),
+    linear-gradient(180deg, #eee5fb 0%, #f7f2f8 56%, #ffffff 100%);
+}
+
+:root[data-theme='dark'] .payment-done-card h2,
+:root[data-theme='dark'] .payment-done-card strong,
+:root[data-theme='dark'] .payment-done-card b {
+  color: #321725;
+}
+
+:root[data-theme='dark'] .payment-done-card span { color: #4e4049; }
+:root[data-theme='dark'] .payment-done-card small { color: #80777e; }
+:root[data-theme='dark'] .done-details-link { color: #704bd2; }
+:root[data-theme='dark'] .done-powered { color: #aaa5aa; }
+:root[data-theme='dark'] .done-close-button { color: #291721; }
 
 .delete-dialog-backdrop {
   position: fixed;

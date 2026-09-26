@@ -710,6 +710,23 @@ function StatusBar() {
 }
 
 function Home({ profile, balance, showBalance, setShowBalance, onAdd, onSend, onProfile, onReceipt, onNav, onQr, transactions, unreadNotifications, onNotifications }) {
+  const [refreshing, setRefreshing] = useState(false)
+  const refreshTimerRef = useRef(null)
+
+  const refreshBalance = () => {
+    setShowBalance(true)
+    setRefreshing(true)
+    if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current)
+    refreshTimerRef.current = window.setTimeout(() => {
+      setRefreshing(false)
+      refreshTimerRef.current = null
+    }, 700)
+  }
+
+  useEffect(() => () => {
+    if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current)
+  }, [])
+
   return (
     <main className="screen home-screen">
       <StatusBar />
@@ -731,12 +748,14 @@ function Home({ profile, balance, showBalance, setShowBalance, onAdd, onSend, on
       <section className="balance-area">
         <p>Hi <b>{profile.name.split(' ')[0]}</b> 🇵🇰</p>
         <div className="balance-line">
-          <strong>{showBalance ? `Rs. ${money(balance)}` : 'Rs. ••••'}</strong>
+          <strong className={refreshing ? 'balance-value--refreshing' : 'balance-value--refreshed'}>
+            {refreshing ? 'Rs. ...' : (showBalance ? `Rs. ${money(balance)}` : 'Rs. ••••')}
+          </strong>
           <button type="button" onClick={() => setShowBalance(!showBalance)}><Icon name="eye" /></button>
         </div>
-        <button className="refresh-line" type="button" onClick={() => setShowBalance(true)}>
+        <button className={`refresh-line ${refreshing ? 'refresh-line--active' : ''}`} type="button" onClick={refreshBalance} disabled={refreshing}>
           <Icon name="refresh" />
-          <span>Updated moments ago</span>
+          <span>{refreshing ? 'Refreshing balance...' : 'Updated just now'}</span>
         </button>
       </section>
 
@@ -1327,8 +1346,8 @@ function Notifications({ notifications, onBack, onOpen, onDelete, onMarkAllRead 
       <section className="notifications-list" aria-label="Payment notifications">
         {notifications.length > 0 && (
           <div className="notifications-intro">
-            <span>System  activity</span>
-            {/* <small>Press and hold a notification for 10 seconds to delete it.</small> */}
+            <span>System activity</span>
+            <small>Press and hold a notification for 10 seconds to delete it.</small>
           </div>
         )}
         {notifications.length === 0 ? (
@@ -1380,8 +1399,8 @@ function Notifications({ notifications, onBack, onOpen, onDelete, onMarkAllRead 
             <h2 id="delete-notification-title">Delete notification?</h2>
             <p>This payment notification will be removed. The transaction history will remain unchanged.</p>
             <div>
-              <button type="button" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button type="button" className="delete-dialog__confirm" onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null) }}>Delete</button>
+              <button type="button" onClick={() => { setDeleteTarget(null); longPressed.current = false }}>Cancel</button>
+              <button type="button" className="delete-dialog__confirm" onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); longPressed.current = false }}>Delete</button>
             </div>
           </section>
         </div>
@@ -1536,6 +1555,104 @@ function History({ transactions, profile, balance, showBalance, setShowBalance, 
   )
 }
 
+function CardScreen({ profile, transactions, onProfile, onAdd, onNotifications, onNav }) {
+  const [frozen, setFrozen] = useState(false)
+  const [revealed, setRevealed] = useState(false)
+  const [showMore, setShowMore] = useState(false)
+  const [editingLimit, setEditingLimit] = useState(false)
+  const [monthlyLimit, setMonthlyLimit] = useState(500000)
+  const [limitDraft, setLimitDraft] = useState('500000')
+  const lastFour = String(profile.account || '8899').slice(-4)
+  const cardNumber = `4216 7800 1234 ${lastFour}`
+  const monthlySpend = transactions
+    .filter((item) => item.direction !== 'received')
+    .reduce((total, item) => total + Number(item.amount || 0), 0)
+  const spendPercent = Math.min(100, monthlyLimit > 0 ? (monthlySpend / monthlyLimit) * 100 : 0)
+
+  const saveLimit = () => {
+    const nextLimit = Number(limitDraft)
+    if (!Number.isFinite(nextLimit) || nextLimit <= 0) return
+    setMonthlyLimit(nextLimit)
+    setEditingLimit(false)
+  }
+
+  return (
+    <main className="screen card-screen">
+      <StatusBar />
+      <header className="card-topbar">
+        <button className="avatar-button card-profile" type="button" onClick={onProfile} aria-label="Open profile">
+          {profile.photo?.startsWith('data:') ? <img src={profile.photo} alt="Profile" /> : (profile.photo || initials(profile.name))}
+        </button>
+        <div className="card-top-actions">
+          <button type="button" onClick={onAdd} aria-label="Add money"><Icon name="plus" /></button>
+          <button type="button" onClick={onNotifications} aria-label="Notifications"><Icon name="bell" /></button>
+        </div>
+      </header>
+
+      <section className={`virtual-card ${frozen ? 'virtual-card--frozen' : ''}`} aria-label="Virtual Visa card">
+        <div className="virtual-card__top">
+          <span className="virtual-card__mark" aria-hidden="true"><i /><i /></span>
+          <span>VIRTUAL</span>
+        </div>
+        {frozen && <strong className="virtual-card__frozen-label">FROZEN</strong>}
+        <b className="virtual-card__name">{profile.name.toUpperCase()}</b>
+        <div className="virtual-card__bottom">
+          <span>{revealed ? cardNumber : lastFour}</span>
+          <strong>VISA</strong>
+        </div>
+      </section>
+
+      <section className="card-actions" aria-label="Card controls">
+        <button className={frozen ? 'active' : ''} type="button" onClick={() => setFrozen((value) => !value)}>
+          <span className="card-action-symbol" aria-hidden="true">❄</span>
+          {frozen ? 'Unfreeze' : 'Freeze'}
+        </button>
+        <button className={revealed ? 'active' : ''} type="button" onClick={() => setRevealed((value) => !value)}>
+          <span><Icon name={revealed ? 'eye' : 'eye-open'} /></span>
+          {revealed ? 'Hide' : 'Reveal'}
+        </button>
+        <button className={showMore ? 'active' : ''} type="button" onClick={() => setShowMore((value) => !value)}>
+          <span><Icon name="more" /></span>
+          More
+        </button>
+      </section>
+
+      {showMore && (
+        <section className="card-more-panel">
+          <div><span>Card type</span><b>Virtual Visa</b></div>
+          <div><span>Status</span><b>{frozen ? 'Frozen' : 'Active'}</b></div>
+          <div><span>Online payments</span><b>Enabled</b></div>
+        </section>
+      )}
+
+      <section className="spending-section">
+        <header>
+          <h2>Spending Control</h2>
+          <button type="button" onClick={() => setEditingLimit(true)}>Edit</button>
+        </header>
+        <div className="spending-card">
+          <span>TOTAL MONTHLY SPEND</span>
+          <div className="spending-values">
+            <b>Rs. {money(monthlySpend)}</b>
+            <b>Rs. {money(monthlyLimit)}</b>
+          </div>
+          <div className="spending-track"><i style={{ width: `${spendPercent}%` }} /></div>
+          <small>{money(spendPercent)}% of your monthly limit used</small>
+          {editingLimit && (
+            <div className="spending-edit">
+              <input inputMode="numeric" value={limitDraft} onChange={(event) => setLimitDraft(event.target.value.replace(/\D/g, ''))} aria-label="Monthly spending limit" />
+              <button type="button" onClick={() => setEditingLimit(false)}>Cancel</button>
+              <button type="button" onClick={saveLimit}>Save</button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <BottomNav active="card" onNav={onNav} />
+    </main>
+  )
+}
+
 function SimpleSection({ title, icon, onBack, onNav }) {
   const options = {
     chat: ['Messages', 'Payment requests', 'Support inbox'],
@@ -1583,11 +1700,13 @@ function QrScanner({ favorites, onBack, onUse }) {
       return
     }
     const favorite = findFavorite(favorites, parsed.account)
+    const parsedBank = normalizeBankName(parsed.bank)
     onUse({
       ...parsed,
       name: favorite?.name || parsed.name,
-      bank: favorite?.bank || normalizeBankName(parsed.bank),
+      bank: favorite?.bank || (banks.includes(parsedBank) ? parsedBank : ''),
       amount: '',
+      favoriteMatched: Boolean(favorite),
     })
   }, [favorites, onUse])
 
@@ -1695,7 +1814,7 @@ function FavoritesManager({ favorites, onBack, onNav, onSave, onDelete }) {
   return (
     <main className="screen favorites-screen">
       <StatusBar />
-      <Header title="Cards" onBack={onBack} />
+      <Header title="Favorite Accounts" onBack={onBack} />
       <section className="favorites-card">
         <h2>Favorite Accounts</h2>
         <p>Saved accounts auto-fill name and bank when the same account or QR is used.</p>
@@ -1722,6 +1841,7 @@ function FavoritesManager({ favorites, onBack, onNav, onSave, onDelete }) {
       </section>
 
       <section className="favorite-list">
+        {favorites.length === 0 && <p className="empty">No favorite accounts yet.</p>}
         {favorites.map((favorite) => (
           <article key={favorite.id}>
             <BankLogo bank={favorite.bank} />
@@ -1734,7 +1854,7 @@ function FavoritesManager({ favorites, onBack, onNav, onSave, onDelete }) {
           </article>
         ))}
       </section>
-      <BottomNav active="card" onNav={onNav} />
+      <BottomNav active="home" onNav={onNav} />
     </main>
   )
 }
@@ -1880,7 +2000,7 @@ function Profile({ profile, balance, onBack, onHistory, onNav, onSave }) {
   )
 }
 
-function Settings({ theme, onThemeChange, onBack, onNav, onSend }) {
+function Settings({ theme, onThemeChange, onBack, onNav, onSend, onFavorites }) {
   return (
     <main className="screen settings-screen">
       <StatusBar />
@@ -1898,6 +2018,17 @@ function Settings({ theme, onThemeChange, onBack, onNav, onSend }) {
             <span className="theme-swatch theme-swatch--dark" />Dark
           </button>
         </div>
+      </section>
+      <section className="settings-card settings-send-card">
+        <div>
+          <b>Favorite Accounts</b>
+          <span>View, add, edit or delete your saved accounts.</span>
+        </div>
+        <button type="button" onClick={onFavorites}>
+          <span><Icon name="card" /></span>
+          Favorite Accounts
+          <Icon name="send" />
+        </button>
       </section>
       <section className="settings-card settings-send-card">
         <div>
@@ -1939,12 +2070,12 @@ function App() {
   const [selected, setSelected] = useState(null)
   const [pendingDraft, setPendingDraft] = useState(null)
   const [sendReturnScreen, setSendReturnScreen] = useState('home')
-  const [amountReturnScreen, setAmountReturnScreen] = useState('send')
   const [pendingDirection, setPendingDirection] = useState('sent')
   const [receiptIntro, setReceiptIntro] = useState(false)
   const [shareOnReceiptOpen, setShareOnReceiptOpen] = useState(false)
   const paymentTimerRef = useRef(null)
   const screenRef = useRef('home')
+  const appHistoryDepthRef = useRef(0)
   const paymentCompletedRef = useRef(false)
   const [favorites, setFavorites] = useState(savedState.favorites)
   const [transactions, setTransactions] = useState(savedState.transactions)
@@ -1957,15 +2088,25 @@ function App() {
     screenRef.current = nextScreen
     setScreen(nextScreen)
     if (window.history.state?.screen !== nextScreen) {
-      window.history.pushState({ screen: nextScreen }, '', `#${nextScreen}`)
+      const nextDepth = appHistoryDepthRef.current + 1
+      appHistoryDepthRef.current = nextDepth
+      window.history.pushState({ screen: nextScreen, depth: nextDepth }, '', `#${nextScreen}`)
     }
   }, [])
 
   const replaceScreen = useCallback((nextScreen) => {
     screenRef.current = nextScreen
     setScreen(nextScreen)
-    window.history.replaceState({ screen: nextScreen }, '', `#${nextScreen}`)
+    window.history.replaceState({ screen: nextScreen, depth: appHistoryDepthRef.current }, '', `#${nextScreen}`)
   }, [])
+
+  const goBack = useCallback(() => {
+    if (appHistoryDepthRef.current > 0) {
+      window.history.back()
+      return
+    }
+    replaceScreen('home')
+  }, [replaceScreen])
 
   const goHome = useCallback(() => {
     if (paymentTimerRef.current) {
@@ -1975,6 +2116,7 @@ function App() {
     setPendingDraft(null)
     setReceiptIntro(false)
     paymentCompletedRef.current = false
+    appHistoryDepthRef.current = 0
     replaceScreen('home')
   }, [replaceScreen])
 
@@ -1999,11 +2141,11 @@ function App() {
 
   useEffect(() => {
     if (!window.history.state?.screen) {
-      window.history.replaceState({ screen: 'home' }, '', '#home')
+      window.history.replaceState({ screen: 'home', depth: 0 }, '', '#home')
     }
 
     const handlePopState = (event) => {
-      if (paymentCompletedRef.current && ['processing', 'done', 'receipt'].includes(screenRef.current)) {
+      if (paymentCompletedRef.current && ['processing', 'done'].includes(screenRef.current)) {
         if (paymentTimerRef.current) {
           window.clearTimeout(paymentTimerRef.current)
           paymentTimerRef.current = null
@@ -2011,10 +2153,12 @@ function App() {
         paymentCompletedRef.current = false
         setPendingDraft(null)
         setReceiptIntro(false)
+        appHistoryDepthRef.current = 0
         replaceScreen('home')
         return
       }
       const previousScreen = event.state?.screen || 'home'
+      appHistoryDepthRef.current = Number.isInteger(event.state?.depth) ? event.state.depth : 0
       screenRef.current = previousScreen
       setScreen(previousScreen)
     }
@@ -2027,21 +2171,17 @@ function App() {
     if (!Capacitor.isNativePlatform()) return undefined
 
     let listener
-    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+    CapacitorApp.addListener('backButton', () => {
       const currentScreen = screenRef.current
       if (currentScreen === 'home') {
         CapacitorApp.minimizeApp()
         return
       }
-      if (paymentCompletedRef.current || currentScreen === 'processing' || currentScreen === 'done') {
+      if (currentScreen === 'processing' || currentScreen === 'done') {
         goHome()
         return
       }
-      if (canGoBack) {
-        window.history.back()
-        return
-      }
-      goHome()
+      goBack()
     }).then((handle) => {
       listener = handle
     })
@@ -2049,7 +2189,7 @@ function App() {
     return () => {
       listener?.remove()
     }
-  }, [goHome])
+  }, [goBack, goHome])
 
   const saveFavorite = (favorite) => {
     setFavorites((list) => {
@@ -2178,11 +2318,11 @@ function App() {
   }
 
   if (screen === 'add') {
-    return <MoneyForm type="receive" profile={profile} favorites={favorites} initialDraft={pendingDraft} onBack={goHome} onSubmit={(draft) => openPaymentReview('received', draft)} onScan={() => navigate('qr')} />
+    return <MoneyForm type="receive" profile={profile} favorites={favorites} initialDraft={pendingDraft} onBack={goBack} onSubmit={(draft) => openPaymentReview('received', draft)} onScan={() => navigate('qr')} />
   }
 
   if (screen === 'send') {
-    return <MoneyForm type="send" profile={profile} favorites={favorites} initialDraft={pendingDraft} onBack={() => navigate(sendReturnScreen)} onSubmit={(draft) => { setPendingDraft({ ...draft, amount: '' }); setAmountReturnScreen('send'); navigate('scanned-amount') }} onScan={() => navigate('qr')} showRecipientName={sendReturnScreen === 'home'} />
+    return <MoneyForm type="send" profile={profile} favorites={favorites} initialDraft={pendingDraft} onBack={goBack} onSubmit={(draft) => { setPendingDraft({ ...draft, amount: '' }); navigate('scanned-amount') }} onScan={() => navigate('qr')} showRecipientName={Boolean(pendingDraft) || sendReturnScreen === 'home'} />
   }
 
   if (screen === 'history') {
@@ -2193,7 +2333,7 @@ function App() {
         balance={balance}
         showBalance={showBalance}
         setShowBalance={setShowBalance}
-        onBack={goHome}
+        onBack={goBack}
         onOpen={(item) => { setReceiptIntro(false); setSelected(item); navigate('receipt') }}
         onDelete={(tid) => {
           setTransactions((list) => list.filter((item) => item.tid !== tid))
@@ -2208,7 +2348,7 @@ function App() {
     return (
       <Notifications
         notifications={notifications}
-        onBack={goHome}
+        onBack={goBack}
         onMarkAllRead={() => setNotifications((list) => list.map((item) => ({ ...item, read: true })))}
         onDelete={(id) => setNotifications((list) => list.filter((item) => item.id !== id))}
         onOpen={(notice) => {
@@ -2230,7 +2370,7 @@ function App() {
         direction={pendingDirection}
         draft={pendingDraft}
         profile={profile}
-        onBack={() => navigate(pendingDirection === 'received' ? 'add' : 'send')}
+        onBack={goBack}
         onConfirm={() => addTransaction(pendingDirection, pendingDraft)}
       />
     )
@@ -2259,11 +2399,25 @@ function App() {
   }
 
   if (screen === 'receipt' && currentReceipt) {
-    return <Receipt item={currentReceipt} profile={profile} onBack={goHome} onShare={shareReceipt} autoShare={shareOnReceiptOpen} onAutoShared={() => setShareOnReceiptOpen(false)} animate={receiptIntro} />
+    return <Receipt item={currentReceipt} profile={profile} onBack={goBack} onShare={shareReceipt} autoShare={shareOnReceiptOpen} onAutoShared={() => setShareOnReceiptOpen(false)} animate={receiptIntro} />
   }
 
   if (screen === 'qr') {
-    return <QrScanner favorites={favorites} onBack={goHome} onUse={(draft) => { setPendingDraft(draft); setAmountReturnScreen('qr'); navigate('scanned-amount') }} />
+    return (
+      <QrScanner
+        favorites={favorites}
+        onBack={goBack}
+        onUse={({ favoriteMatched, ...draft }) => {
+          setPendingDraft(draft)
+          if (favoriteMatched) {
+            navigate('scanned-amount')
+            return
+          }
+          setSendReturnScreen('qr')
+          navigate('send')
+        }}
+      />
+    )
   }
 
   if (screen === 'scanned-amount' && pendingDraft) {
@@ -2271,22 +2425,26 @@ function App() {
       <ScannedAccountAmount
         draft={pendingDraft}
         balance={balance}
-        onBack={() => navigate(amountReturnScreen)}
+        onBack={goBack}
         onNext={(draft) => openPaymentReview('sent', draft)}
       />
     )
   }
 
   if (screen === 'card') {
-    return <FavoritesManager favorites={favorites} onBack={goHome} onNav={openNav} onSave={saveFavorite} onDelete={(id) => setFavorites((list) => list.filter((item) => item.id !== id))} />
+    return <CardScreen profile={profile} transactions={transactions} onProfile={() => navigate('profile')} onAdd={() => navigate('add')} onNotifications={() => navigate('notifications')} onNav={openNav} />
+  }
+
+  if (screen === 'favorites') {
+    return <FavoritesManager favorites={favorites} onBack={goBack} onNav={openNav} onSave={saveFavorite} onDelete={(id) => setFavorites((list) => list.filter((item) => item.id !== id))} />
   }
 
   if (screen === 'profile') {
-    return <Profile profile={profile} balance={balance} onBack={goHome} onHistory={() => navigate('history')} onNav={openNav} onSave={setProfile} />
+    return <Profile profile={profile} balance={balance} onBack={goBack} onHistory={() => navigate('history')} onNav={openNav} onSave={setProfile} />
   }
 
   if (screen === 'more') {
-    return <Settings theme={theme} onThemeChange={setTheme} onBack={() => navigate('profile')} onNav={openNav} onSend={() => startSend('more')} />
+    return <Settings theme={theme} onThemeChange={setTheme} onBack={goBack} onNav={openNav} onSend={() => startSend('more')} onFavorites={() => navigate('favorites')} />
   }
 
   if (screen !== 'home') {
@@ -2301,7 +2459,7 @@ function App() {
       gift: 'Gift Envelope',
     }
 
-    return <SimpleSection title={labels[screen] || 'Section'} icon={screen} onBack={goHome} onNav={openNav} />
+    return <SimpleSection title={labels[screen] || 'Section'} icon={screen} onBack={goBack} onNav={openNav} />
   }
 
   return (
